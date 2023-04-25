@@ -34,7 +34,7 @@ def preprocess(strings, start_token, end_token, pad_token):
     return res
 
 
-def string_to_tensor(strings, l2i_dict):
+def string_to_tensor(strings, l2i_dict, unk_token):
     """
     replaces the chareceters of the sting with corrospong ix (by refering l2i_dict) and returns as int tensor
     """
@@ -43,7 +43,8 @@ def string_to_tensor(strings, l2i_dict):
     for i in range(len(strings)):
         for j in range(len(strings[i])):
             if strings[i][j] not in l2i_dict :
-                continue #ignoring the charecters that are not in the dictionary
-            res[i][j] = l2i_dict[strings[i][j]]
+                res[i][j] = l2i_dict[unk_token]
+            else:
+                res[i][j] = l2i_dict[strings[i][j]]
         
     return res.type(torch.LongTensor)
