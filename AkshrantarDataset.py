@@ -40,6 +40,7 @@ class AksharantarDataset():
             res.append(temp)
         return res
 
+
     def string_to_tensor(self, strings, l2i_dict):
         """
         replaces the chareceters of the sting with corrospong ix (by refering l2i_dict) and returns as int tensor
@@ -51,17 +52,18 @@ class AksharantarDataset():
                 if strings[i][j] not in l2i_dict :
                     res[i][j] = l2i_dict[self.unk_token]
                 else:
-                    res[i][j] = l2i_dict[strings[i][j]]
-            
+                    res[i][j] = l2i_dict[strings[i][j]] 
         return res.type(torch.LongTensor)
 
 
-    def load_data(self, set, batch_size):
+    def load_data(self, set, batch_size, num_batches = -1):
         """
         Parameter:
         set: a string to define which set of data to load, set can be any one of the following ["train", "test", "valid"]
         batch_size: batch size in which the data be loaded
-
+        num_batches: returns this many batches of size batch_size
+                     if -1 : returns the entire data in batches 
+                     else only returns that many number of batches
         Returns:
         
         """
@@ -71,16 +73,36 @@ class AksharantarDataset():
         source, target = df[0].tolist(), df[1].tolist()
 
         res = []
+        batch_count = 0
         for i in range(0, len(source), batch_size):
             source_batch, target_batch = source[i:i+batch_size], target[i:i+batch_size]
             source_batch, target_batch = self.preprocess(source_batch), self.preprocess(target_batch)
             source_batch, target_batch = self.string_to_tensor(source_batch, self.en_l2i), self.string_to_tensor(target_batch, self.tr_l2i)
             source_batch, target_batch = source_batch.transpose(0,1), target_batch.transpose(0,1)
             res.append((source_batch, target_batch))
+            batch_count += 1
+            if(num_batches != -1 and batch_count == num_batches):
+                break
         return res
 
 
-
-# %%
-data = AksharantarDataset("tam")
-print(len(data.tr_i2l))
+    def tensor_to_string(self, output, string_type = "target"):
+        """
+        output shape: target_seq_length * N
+        string_type : can take values of ["source", "target"]
+                      if source: the ouput is encoded form of english
+                      if target: the output is encoded form of target language
+        """
+        if(string_type == "target"):
+            i2l_dict = self.tr_i2l
+        elif(string_type == "source"):
+            i2l_dict = self.en_i2l
+        
+        res = []
+        for j in range(output.shape[1]):
+            temp = ""
+            for i in range(output.shape[0]):
+                temp += i2l_dict[output[i,j].item()]
+            
+            res.append(temp)
+        return res
