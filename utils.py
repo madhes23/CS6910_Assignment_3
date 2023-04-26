@@ -22,33 +22,33 @@ import numpy as np
 #     return res
 
 
-def preprocess(strings, start_token, end_token, pad_token):
-    """Adds start and end token and adds padding"""
-    res = []
-    max_len = len(max(strings, key=len))
+# def preprocess(strings, start_token, end_token, pad_token):
+#     """Adds start and end token and adds padding"""
+#     res = []
+#     max_len = len(max(strings, key=len))
 
-    for item in strings:
-        temp = start_token + item + end_token
-        temp = temp.ljust(max_len+2, pad_token) #2 is added, because we added start and end token to each word
-        res.append(temp)
+#     for item in strings:
+#         temp = start_token + item + end_token
+#         temp = temp.ljust(max_len+2, pad_token) #2 is added, because we added start and end token to each word
+#         res.append(temp)
 
-    return res
+#     return res
 
 
-def string_to_tensor(strings, l2i_dict, unk_token):
-    """
-    replaces the chareceters of the sting with corrospong ix (by refering l2i_dict) and returns as int tensor
-    """
-    res = torch.zeros(len(strings), len(strings[0]))
+# def string_to_tensor(strings, l2i_dict, unk_token):
+#     """
+#     replaces the chareceters of the sting with corrospong ix (by refering l2i_dict) and returns as int tensor
+#     """
+#     res = torch.zeros(len(strings), len(strings[0]))
     
-    for i in range(len(strings)):
-        for j in range(len(strings[i])):
-            if strings[i][j] not in l2i_dict :
-                res[i][j] = l2i_dict[unk_token]
-            else:
-                res[i][j] = l2i_dict[strings[i][j]]
+#     for i in range(len(strings)):
+#         for j in range(len(strings[i])):
+#             if strings[i][j] not in l2i_dict :
+#                 res[i][j] = l2i_dict[unk_token]
+#             else:
+#                 res[i][j] = l2i_dict[strings[i][j]]
         
-    return res.type(torch.LongTensor)
+#     return res.type(torch.LongTensor)
 
 
 def plot_graphs(training_errors, validation_errors, training_accuracy, validation_accuracy):
