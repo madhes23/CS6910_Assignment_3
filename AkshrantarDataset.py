@@ -29,14 +29,20 @@ class AksharantarDataset():
             self.tr_i2l[i] = x
 
     
-    def preprocess(self, strings):
-        """Adds start and end token and adds padding"""
+    def preprocess(self, strings, lower_bound = -1):
+        """
+        Adds start and end token and adds padding
+
+        lower_bound : ensures that each strings is padded atleast upto lower bound length
+        """
         res = []
-        max_len = len(max(strings, key=len))
+        max_len = len(max(strings, key=len)) + 2  #2 is added, because we added start and end token to each word
+        if(lower_bound != -1):
+            max_len = max(max_len, lower_bound)
 
         for item in strings:
             temp = self.start_token + item + self.end_token
-            temp = temp.ljust(max_len+2, self.pad_token) #2 is added, because we added start and end token to each word
+            temp = temp.ljust(max_len, self.pad_token)
             res.append(temp)
         return res
 
@@ -56,7 +62,7 @@ class AksharantarDataset():
         return res.type(torch.LongTensor)
 
 
-    def load_data(self, set, batch_size, num_batches = -1):
+    def load_data(self, set, batch_size, num_batches = -1, padding_lower_bound = -1):
         """
         Parameter:
         set: a string to define which set of data to load, set can be any one of the following ["train", "test", "valid"]
@@ -76,7 +82,7 @@ class AksharantarDataset():
         batch_count = 0
         for i in range(0, len(source), batch_size):
             source_batch, target_batch = source[i:i+batch_size], target[i:i+batch_size]
-            source_batch, target_batch = self.preprocess(source_batch), self.preprocess(target_batch)
+            source_batch, target_batch = self.preprocess(source_batch, padding_lower_bound), self.preprocess(target_batch, padding_lower_bound)
             source_batch, target_batch = self.string_to_tensor(source_batch, self.en_l2i), self.string_to_tensor(target_batch, self.tr_l2i)
             source_batch, target_batch = source_batch.transpose(0,1), target_batch.transpose(0,1)
             res.append((source_batch, target_batch))
