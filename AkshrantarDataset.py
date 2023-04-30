@@ -1,6 +1,7 @@
 # %%
 import torch
 import pandas as pd
+from sklearn.utils import shuffle 
 
 # %%
 class AksharantarDataset():
@@ -10,9 +11,10 @@ class AksharantarDataset():
         self.pad_token = pad_token
         self.unk_token = unk_token
         self.lang = lang
+        self.dir_path = 'aksharantar_sampled/'
 
         #contructing dictionaries
-        train_path = 'aksharantar_sampled/' + self.lang + '/'+self.lang+'_train.csv'
+        train_path = self.dir_path + self.lang + '/'+self.lang+'_train.csv'
         df = pd.read_csv(train_path, header=None)
         train_source, train_target = df[0].tolist(), df[1].tolist()
         english_chars = list(set(''.join(train_source) + start_token + end_token + pad_token + unk_token))
@@ -28,7 +30,7 @@ class AksharantarDataset():
             self.tr_l2i[x] = i
             self.tr_i2l[i] = x
 
-    
+    #TODO: convert the lower_bound -> equalize_length
     def preprocess(self, strings, lower_bound = -1):
         """
         Adds start and end token and adds padding
@@ -62,7 +64,7 @@ class AksharantarDataset():
         return res.type(torch.LongTensor)
 
 
-    def load_data(self, set, batch_size, num_batches = -1, padding_lower_bound = -1):
+    def load_data(self, set, batch_size, is_shuffle = True, num_batches = -1, padding_lower_bound = -1):
         """
         Parameter:
         set: a string to define which set of data to load, set can be any one of the following ["train", "test", "valid"]
@@ -73,10 +75,12 @@ class AksharantarDataset():
         Returns:
         
         """
-        path = 'aksharantar_sampled/' + self.lang + '/'+self.lang+'_' + set +'.csv'
+        path = self.dir_path + self.lang + '/'+self.lang+'_' + set +'.csv'
         df = pd.read_csv(path, header=None)
 
         source, target = df[0].tolist(), df[1].tolist()
+        if(is_shuffle == True):
+            source, target = shuffle(source, target)
 
         res = []
         batch_count = 0
