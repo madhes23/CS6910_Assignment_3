@@ -30,23 +30,35 @@ class AksharantarDataset():
             self.tr_l2i[x] = i
             self.tr_i2l[i] = x
 
-    #TODO: convert the lower_bound -> equalize_length
-    def preprocess(self, strings, lower_bound = -1):
-        """
-        Adds start and end token and adds padding
 
-        lower_bound : ensures that each strings is padded atleast upto lower bound length
+    def preprocess(self, strings, upper_bound = -1):
+        """
+        Parameters:
+        strings: a list of strings to be preprocessed
+        uppper_bound: If set a value, all the strings in the list will have a constant lenght of this value
         """
         res = []
-        max_len = len(max(strings, key=len)) + 2  #2 is added, because we added start and end token to each word
-        if(lower_bound != -1):
-            max_len = max(max_len, lower_bound)
+        max_len = len(max(strings, key=len)) + 2 #2 is added, because we added start and end token to each word
 
-        for item in strings:
-            temp = self.start_token + item + self.end_token
-            temp = temp.ljust(max_len, self.pad_token)
-            res.append(temp)
-        return res
+        if(upper_bound == -1):
+            for item in strings:
+                temp = self.start_token + item + self.end_token
+                temp = temp.ljust(max_len, self.pad_token)
+                res.append(temp)
+            return res
+        else:
+            for item in strings:
+                temp = self.start_token + item + self.end_token
+                if(len(temp) < upper_bound):
+                    temp = temp.ljust(upper_bound, self.pad_token)
+                elif(len(temp) > upper_bound):
+                    print(temp)
+                    to_slice = len(temp) - upper_bound + 1
+                    print(to_slice)
+                    temp = temp[:-to_slice]
+                    temp += self.end_token
+                res.append(temp)
+            return res
 
 
     def string_to_tensor(self, strings, l2i_dict):
@@ -64,7 +76,7 @@ class AksharantarDataset():
         return res.type(torch.LongTensor)
 
 
-    def load_data(self, set, batch_size, is_shuffle = True, num_batches = -1, padding_lower_bound = -1):
+    def load_data(self, set, batch_size, is_shuffle = True, num_batches = -1, padding_upper_bound = -1):
         """
         Parameter:
         set: a string to define which set of data to load, set can be any one of the following ["train", "test", "valid"]
@@ -86,7 +98,7 @@ class AksharantarDataset():
         batch_count = 0
         for i in range(0, len(source), batch_size):
             source_batch, target_batch = source[i:i+batch_size], target[i:i+batch_size]
-            source_batch, target_batch = self.preprocess(source_batch, padding_lower_bound), self.preprocess(target_batch, padding_lower_bound)
+            source_batch, target_batch = self.preprocess(source_batch, padding_upper_bound), self.preprocess(target_batch, padding_upper_bound)
             source_batch, target_batch = self.string_to_tensor(source_batch, self.en_l2i), self.string_to_tensor(target_batch, self.tr_l2i)
             source_batch, target_batch = source_batch.transpose(0,1), target_batch.transpose(0,1)
             res.append((source_batch, target_batch))
