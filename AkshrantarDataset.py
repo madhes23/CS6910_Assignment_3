@@ -21,14 +21,14 @@ class AksharantarDataset():
         target_chars = list(set(''.join(train_target) + start_token + end_token + pad_token + unk_token))
 
         self.en_i2l, self.en_l2i = {}, {}
-        self.tr_i2l, self.tr_l2i = {}, {}
+        self.tar_i2l, self.tar_l2i = {}, {}
 
         for i, x in enumerate(english_chars):
             self.en_l2i[x] = i
             self.en_i2l[i] = x
         for i, x in enumerate(target_chars):
-            self.tr_l2i[x] = i
-            self.tr_i2l[i] = x
+            self.tar_l2i[x] = i
+            self.tar_i2l[i] = x
 
 
     def preprocess(self, strings, upper_bound = -1):
@@ -99,7 +99,7 @@ class AksharantarDataset():
         for i in range(0, len(source), batch_size):
             source_batch, target_batch = source[i:i+batch_size], target[i:i+batch_size]
             source_batch, target_batch = self.preprocess(source_batch, padding_upper_bound), self.preprocess(target_batch, padding_upper_bound)
-            source_batch, target_batch = self.string_to_tensor(source_batch, self.en_l2i), self.string_to_tensor(target_batch, self.tr_l2i)
+            source_batch, target_batch = self.string_to_tensor(source_batch, self.en_l2i), self.string_to_tensor(target_batch, self.tar_l2i)
             source_batch, target_batch = source_batch.transpose(0,1), target_batch.transpose(0,1)
             res.append((source_batch, target_batch))
             batch_count += 1
@@ -116,15 +116,16 @@ class AksharantarDataset():
                       if target: the output is encoded form of target language
         """
         if(string_type == "target"):
-            i2l_dict = self.tr_i2l
+            i2l_dict = self.tar_i2l
         elif(string_type == "source"):
             i2l_dict = self.en_i2l
         
         res = []
         for j in range(output.shape[1]):
             temp = ""
-            for i in range(output.shape[0]):
+            for i in range(1, output.shape[0]): #starting from index 1, because 0th index is always start_token
+                if(i2l_dict[output[i,j].item()] == self.end_token):
+                    break
                 temp += i2l_dict[output[i,j].item()]
-            
             res.append(temp)
         return res
