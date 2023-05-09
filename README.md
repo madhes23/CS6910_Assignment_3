@@ -12,6 +12,8 @@
 ## AttentionDecoder
 ## Seq2Seq
 ## Training
+### Early Stopping
+Here Early Stopping is done to prevent extremely inefficient runs from happening.
 ### TFR method
 
 # Usage Guidelines
