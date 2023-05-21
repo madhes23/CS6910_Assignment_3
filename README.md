@@ -133,7 +133,7 @@ For the second 50% of the epochs: Teacher forcing ratio is not applied
 Using `train.py` - For help related on how to use `train.py`, type `python train.py -h`  
 **Best Models**:  
 Configuration for the best model without using attention:  
-`python train.py --batch_size 128 --epochs 9 --learning_rate 0.001 --embedding_size 32 --encoder_layers 3 --decoder_layers 2 --enc_dropout 0.3 --dec_dropout 0.3 --hidden_size 256 --rnn_class LSTM --bi_directional`
+`python train.py --batch_size 32 --epochs 9 --learning_rate 0.001 --embedding_size 32 --encoder_layers 3 --decoder_layers 2 --enc_dropout 0.3 --dec_dropout 0.3 --hidden_size 256 --rnn_class LSTM --bi_directional`
 
 Configuration for the best model using attention:   
 `python train.py --batch_size 128 --epochs 16 --learning_rate 0.001 --embedding_size 128 --encoder_layers 3 --decoder_layers 2 --enc_dropout 0.2 --dec_dropout 0.2 --hidden_size 256 --rnn_class LSTM --bi_directional --attention`
