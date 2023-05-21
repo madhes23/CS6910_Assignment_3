@@ -319,6 +319,17 @@ class Seq2Seq(nn.Module):
 
 
     def get_attention_matrix(self, source, target):
+        """
+        Paramters:
+        ---------
+        source : torch.Tensor of shape (source seq_len, N) where source seq_len = len(longest word in the batch) if attention is not used, 
+                                                                                                        else seq_len = max_length 
+        target : torch.Tensor of shape (target seq_len, N)
+
+        Returns:
+        ------
+        Attention matrix : torch.Tensor of shape (N, max_len-1, max_len-1)
+        """
         if(self.attn_dec == False):
             print("Invalid request")
             return
@@ -403,7 +414,7 @@ class Seq2Seq(nn.Module):
                     source_text = data.tensor_to_string(source, "source")
                     target_text = data.tensor_to_string(target)
                     ouput_text = data.tensor_to_string(output.argmax(2))
-                    if(os.path.isfile(path_to_store_predictions) == False):
+                    if(os.path.isfile(path_to_store_predictions) == False): #if the file doesnt exist, create one
                         with open(path_to_store_predictions, 'a', encoding="utf-8") as f:
                             f.write(f'Source,Target,Predicted,PredictionStatus\n')
                             
