@@ -3,6 +3,7 @@ import argparse
 import torch.optim as optim
 import wandb
 import matplotlib.pyplot as plt
+from Utils import plot_graphs
 
 
 # Model hyperparameters (for both attention and vanilla models)
@@ -83,7 +84,7 @@ if(__name__ == '__main__'):
 
     #logging in WandB
     print("Syncing loss and accuracies to WandB: ")
-    run_name = f"{args.encoder_layers}_enc_{args.decoder_layers}_dec_{args.hidden_size}_hs_"
+    run_name = f"cli_{args.encoder_layers}_enc_{args.decoder_layers}_dec_{args.hidden_size}_hs_"
     if(bi_directional == True):
         run_name += "bidir_"
     if(dec.used_attn == True):

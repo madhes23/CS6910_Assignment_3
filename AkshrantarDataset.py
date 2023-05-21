@@ -5,6 +5,15 @@ from sklearn.utils import shuffle
 
 # %%
 class AksharantarDataset():
+    """
+    This Class handles the data related operations for Aksharantar Dataset
+    Init Parameters:
+    ---------------
+    lang : str (one of the languages in AkshrantarDataset)
+    start_token : starting token used in pre-processing the data
+    end_token : ending token used in pre-processing the data
+    unk_token : token used for unknown values in the data
+    """
     def __init__(self, lang, start_token='<', end_token='>', pad_token=' ', unk_token='~'):
         self.start_token = start_token
         self.end_token = end_token
@@ -34,8 +43,13 @@ class AksharantarDataset():
     def preprocess(self, strings, upper_bound = -1):
         """
         Parameters:
+        ----------
         strings: a list of strings to be preprocessed
         uppper_bound: If set a value, all the strings in the list will have a constant lenght of this value
+
+        Returns:
+        -------
+        res : a list of strings after tokenization (and slicing in case of upper_bound is applied)
         """
         res = []
         max_len = len(max(strings, key=len)) + 2 #2 is added, because we added start and end token to each word
@@ -63,7 +77,16 @@ class AksharantarDataset():
 
     def string_to_tensor(self, strings, l2i_dict):
         """
-        replaces the chareceters of the sting with corrospong ix (by refering l2i_dict) and returns as int tensor
+        Replaces the chareceters of the sting with corrospong ix (by refering l2i_dict) and returns as int tensor
+        
+        Paramteters:
+        ----------
+        strings: list of preprocessed strings
+        l2i_dict : letter2index dictionary to be used for converting string to tensor
+
+        Returns:
+        ------
+        res : torch.Tensor of shape (len(strings), len(strings[0]))
         """
         res = torch.zeros(len(strings), len(strings[0]))
         
@@ -78,14 +101,17 @@ class AksharantarDataset():
 
     def load_data(self, set, batch_size, is_shuffle = True, num_batches = -1, padding_upper_bound = -1):
         """
-        Parameter:
+        Parameters:
+        -----------
         set: a string to define which set of data to load, set can be any one of the following ["train", "test", "valid"]
         batch_size: batch size in which the data be loaded
         num_batches: returns this many batches of size batch_size
                      if -1 : returns the entire data in batches 
                      else only returns that many number of batches
-        Returns:
         
+        Returns:
+        -------
+        A list of tuples (source, target), where source and target is a torch.Tensor
         """
         path = self.dir_path + self.lang + '/'+self.lang+'_' + set +'.csv'
         df = pd.read_csv(path, header=None)
@@ -110,10 +136,17 @@ class AksharantarDataset():
 
     def tensor_to_string(self, output, string_type = "target"):
         """
+        Converts tensors to strings, where each string is stored in column wise in the tensors by default
+
+        Parameters:
+        ----------
         output shape: target_seq_length * N
         string_type : can take values of ["source", "target"]
                       if source: the ouput is encoded form of english
                       if target: the output is encoded form of target language
+        
+        Returns:
+        A list of strings after convertion (and removing the tokens)
         """
         if(string_type == "target"):
             i2l_dict = self.tar_i2l

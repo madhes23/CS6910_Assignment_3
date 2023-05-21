@@ -7,7 +7,7 @@ def plot_graphs(training_errors, validation_errors, training_accuracy, validatio
     """
     Plots a Error and Accuracy graphs for training and validation data over the epochs
 
-    Params:
+    Parameters:
     -----
     training_errors: list containing error (ie loss values) of the training data over the epochs
     validation_errors: list containing error (ie loss values) of the validation data over the epochs

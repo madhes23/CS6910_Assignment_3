@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from AkshrantarDataset import AksharantarDataset
 import random
 from tqdm import tqdm
-from Utils import plot_graphs
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -19,7 +18,7 @@ criterion = nn.CrossEntropyLoss(ignore_index=data.tar_l2i[pad_token])
 target_char_count = len(data.tar_l2i)
 english_char_count = len(data.en_l2i)
 
-#main classes for the Seq2Seq laearning problem
+#main classes for the Seq learning problem
 class Encoder(nn.Module):
     def __init__(self, input_size, embedding_size, hidden_size, num_layers = 1, p = 0, bi_dir = False, rnn_class = nn.GRU):
         """
@@ -95,6 +94,7 @@ class Decoder(nn.Module):
         cell: torch.Tensor of shape (num_layers * D, N, hidden_size)
 
         Outputs:
+        -------
         predications: torch.Tensor of shape (N, target_char_count)
         hidden: torch.Tensor of shape (num_layers * D, N, hidden_size)
         
@@ -382,10 +382,12 @@ class Seq2Seq(nn.Module):
         Compares the tensors, and calculates the wordwise accuracy. 
         Note: We do not care what is the ouput after we see the end_token
         hence comparing only upto the end_token
+        
         Parameters:
         ---------
         output: torch.Tensor of shape (seq_len, N)
         target: torch.Tensor of shape (seq_len, N)
+        
         Returns:
         -------
         word-wise comparition accuracy[in the range 0-100%] between output vs target matrix
@@ -493,11 +495,6 @@ class Seq2Seq(nn.Module):
                     output = self(inp_data, target, teacher_forcing)
                 
                 output = output.to(device)
-                
-                # if(epoch == num_epochs-1 and print_batches != 0):
-                #     print(data.tensor_to_string(output.argmax(2)))
-                #     print(data.tensor_to_string(target))
-                #     print_batches -= 1
 
                 running_accuracy += self.calc_accuracy(output.argmax(2), target)
 
