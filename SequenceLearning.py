@@ -266,6 +266,7 @@ class Seq2Seq(nn.Module):
                                                                                                         else seq_len = max_length 
     target : torch.Tensor of shape (target seq_len, N)
     teacher_forcing : A boolean value to indicate if the teacher forcing should be used.
+    
     Output:
     ------
     outputs : torch.Tensor of shape(target seq_len, batch_size, target_char_count)
