@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from AkshrantarDataset import AksharantarDataset
 import random
+import os.path
 from tqdm import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -57,13 +58,11 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         # x shape: (seq_length, N) where N is batch size
-
         embedding = self.dropout(self.embedding(x))
         # embedding shape: (seq_length, N, embedding_size)
 
         if(self.rnn_class.__name__ == "LSTM"):
             outputs, (hidden, cell) = self.rnn(embedding)
-            # outputs shape: (seq_length, N, hidden_size)
         else:
             outputs, hidden = self.rnn(embedding)
         
@@ -118,10 +117,6 @@ class Decoder(nn.Module):
 
     def forward(self, x, hidden, cell = None, encoder_outputs = None):
         #cell is set to none, for GRU and RNN
-
-        # x shape: (N) where N is for batch size, we want it to be (1, N), seq_length
-        # is 1 here because we are sending in a single word and not a sentence
-        # print(x.shape, hidden.shape, cell.shape)
         x = x.unsqueeze(0)
 
         embedding = self.dropout(self.embedding(x))
@@ -135,10 +130,6 @@ class Decoder(nn.Module):
             
 
         predictions = self.fc(outputs)
-
-        # predictions shape: (1, N, length_target_vocabulary) to send it to
-        # loss function we want it to be (N, length_target_vocabulary) so we're
-        # just gonna remove the first dim
         predictions = predictions.squeeze(0)
 
         if(self.rnn_class.__name__ == "LSTM"):
@@ -209,43 +200,25 @@ class AttnDecoder(nn.Module):
 
         # print("temp ", temp.shape) # (1, N, (d*nl).hs+es)
 
-        temp = self.attn(temp)
-        # print("after attn ", temp.shape) # (1, N, max)
+        temp = self.attn(temp)# (1, N, max)
 
         attn_weights = F.softmax(
             temp, dim=1)
-        # print("attn_weights :",attn_weights.shape) # (1, N, max)
-        # print("ecn_op: ", encoder_outputs.shape)
-        # print("attn wei: ", attn_weights.transpose(0,1).shape)
-        # print("enc_opts ", encoder_outputs.transpose(0,1).shape)
         
         attn_applied = torch.bmm(attn_weights.transpose(0,1),
-                                 encoder_outputs.transpose(0,1))
-        # attn_applied (N, 1, hs)
+                                 encoder_outputs.transpose(0,1))  # attn_applied (N, 1, hs)
 
         attn_applied = attn_applied.transpose(0,1) #(1, N, d.hs)
-        
-        # print("attn appld ", attn_applied.shape) # (1, N, d.hs)
 
-        output = torch.cat((embedded, attn_applied), 2)
-        # print("outpt after cat ",output.shape) # (1, N, (D)hs+es)
-
-        output = self.attn_combine(output)
-        # print("after atn comb: ",output.shape) # (1, N, hs)
-        
+        output = torch.cat((embedded, attn_applied), 2)  # (1, N, (D)hs+es)
+        output = self.attn_combine(output) # (1, N, hs)        
         output = F.relu(output)
         if(self.rnn_class.__name__ == "LSTM"):
             output, (hidden, cell) = self.rnn(output, (hidden, cell)) 
         else:
             output, hidden = self.rnn(output, hidden)
 
-        # print("out ", output.shape, "hid ", hidden.shape)
-
         prob = self.out(output).squeeze(0) #(1, N, op)
-        # print("prob ", prob.shape)
-
-        # output = F.log_softmax(self.out(output[0]), dim=1)
-        # print("attn ", attn_weights.shape)
         if(self.rnn_class.__name__ == "LSTM"):
             return prob, hidden, cell, attn_weights
         else:
@@ -286,14 +259,7 @@ class Seq2Seq(nn.Module):
         batch_size = source.shape[1] 
         target_len = target.shape[0]
 
-        # print("source shape ", source.shape)
-        # print("target shape ", target.shape)
-        # print("N : ", batch_size)
-        # print("tar len : ", target_len)
-
         outputs = torch.zeros(target_len, batch_size, target_char_count)
-        # print("outputs shape : ", outputs.shape)
-
         
         if(self.rnn_class.__name__ == "LSTM"):
             enc_ops, hidden, cell = self.encoder(source)
@@ -304,9 +270,7 @@ class Seq2Seq(nn.Module):
             hidden = hidden[-self.D * self.decoder_layers: , : , : ]
         elif(self.encoder_layers < self.decoder_layers): #repeat the top most layer to decoder_layer number of times (without the loss of bidirectional info)
             last = hidden[-self.D * 1: , : , :]
-            # print("last : ", last.shape)
             hidden = last.repeat(self.decoder_layers, 1, 1)
-            # print("hidden after ", hidden.shape)        
 
 
         if(self.rnn_class.__name__ == "LSTM"):
@@ -316,18 +280,15 @@ class Seq2Seq(nn.Module):
                 last = cell[-self.D * 1: , : , :]
                 cell = last.repeat(self.decoder_layers, 1, 1)
 
-
         # Get the first input (start_token) and input it to the Decoder
         x = target[0]
         outputs[:, :, data.tar_l2i[start_token]] = 1 #setting prob = 1 for starting token 
-        # print("target len :", target_len)
         overall_attn = None
         for t in range(1, target_len):
             # Use previous hidden, cell as context from encoder at start
             if(self.rnn_class.__name__ == "LSTM"):
                 if(self.attn_dec == True):
                     output, hidden, cell, attention = self.decoder(x, hidden, cell, encoder_outputs= enc_ops)
-                    # print(attention.shape)
                     if(overall_attn == None):
                         overall_attn = attention
                     else:
@@ -349,18 +310,8 @@ class Seq2Seq(nn.Module):
 
             # Get the best word the Decoder predicted (index in the vocabulary)
             best_guess = output.argmax(1)
-
-            # With probability of teacher_force_ratio we take the actual next word
-            # otherwise we take the word that the Decoder predicted it to be.
-            # Teacher Forcing is used so that the model gets used to seeing
-            # similar inputs at training and testing time, if teacher forcing is 1
-            # then inputs at test time might be completely different than what the
-            # network is used to. This was a long comment.
             x = target[t] if teacher_forcing == True else best_guess
-        # print("OUTPUTS: ", outputs)
 
-        # print(attention.shape)
-        # print(overall_attn.shape)
         if(self.attn_dec == True):
             return outputs, overall_attn
         else:
@@ -452,9 +403,11 @@ class Seq2Seq(nn.Module):
                     source_text = data.tensor_to_string(source, "source")
                     target_text = data.tensor_to_string(target)
                     ouput_text = data.tensor_to_string(output.argmax(2))
-
+                    if(os.path.isfile(path_to_store_predictions) == False):
+                        with open(path_to_store_predictions, 'a', encoding="utf-8") as f:
+                            f.write(f'Source,Target,Predicted,PredictionStatus\n')
+                            
                     with open(path_to_store_predictions, 'a', encoding="utf-8") as f:
-                        f.write(f'Source,Target,Predicted,PredictionStatus\n')
                         for en, crt, pred in zip(source_text, target_text, ouput_text):
                             prediction_status = "wrong"
                             if(crt == pred):
@@ -482,11 +435,9 @@ class Seq2Seq(nn.Module):
             running_loss = 0
             running_accuracy = 0
             total_batches = len(train)
-                
-
-            for inp_data, target in tqdm(train, desc=f"[Epoch {epoch+1:3d}/{num_epochs}] ", leave = False):        
-            # for inp_data, target in train:
-                inp_data = inp_data.to(device)
+            for source, target in tqdm(train, desc=f"[Epoch {epoch+1:3d}/{num_epochs}] ", leave = False):        
+            # for source, target in train:
+                source = source.to(device)
                 target = target.to(device)
 
                 teacher_forcing = False
@@ -494,9 +445,9 @@ class Seq2Seq(nn.Module):
                     teacher_forcing = True if random.random() < teacher_forcing_ratio else False
                     
                 if(self.attn_dec == True):
-                    output, _ = self(inp_data, target, teacher_forcing)
+                    output, _ = self(source, target, teacher_forcing)
                 else:
-                    output = self(inp_data, target, teacher_forcing)
+                    output = self(source, target, teacher_forcing)
                 
                 output = output.to(device)
 
@@ -520,18 +471,17 @@ class Seq2Seq(nn.Module):
             val_loss_list.append(val_loss)
             val_acc_list.append(val_accuracy)
 
-            # if(epoch+1 >= early_stoping_patience): #TODO: uncomment this
-            #     if(val_acc_list[-1] < 10): #breaking if the validation acc hasnt incresed above 10 even after 'early_stoping_patience' epochs
-            #         break
+            if(epoch+1 >= early_stoping_patience):
+                if(val_acc_list[-1] < 10): #breaking if the validation acc hasnt incresed above 10 even after 'early_stoping_patience' epochs
+                    break
 
-            #     temp_acc_list = val_acc_list[-early_stoping_patience : ] #breaking if the validation data starts to overfit
-            #     over_fitting = True
-            #     for i in range(1,len(temp_acc_list)):
-            #         if(round(temp_acc_list[i-1], 1) <= round(temp_acc_list[i], 1)):
-            #             over_fitting = False
-            #             break
-            #     if(over_fitting == True):
-            #         break
-
+                temp_acc_list = val_acc_list[-early_stoping_patience : ] #breaking if the validation data starts to overfit
+                over_fitting = True
+                for i in range(1,len(temp_acc_list)):
+                    if(round(temp_acc_list[i-1], 1) <= round(temp_acc_list[i], 1)):
+                        over_fitting = False
+                        break
+                if(over_fitting == True):
+                    break
 
         return loss_list, val_loss_list, acc_list, val_acc_list
