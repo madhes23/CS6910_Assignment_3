@@ -337,6 +337,10 @@ class Seq2Seq(nn.Module):
             else:
                 if(self.attn_dec == True):
                     output, hidden, attention = self.decoder(x, hidden, encoder_outputs=enc_ops)
+                    if(overall_attn == None):
+                        overall_attn = attention
+                    else:
+                        overall_attn = torch.cat((overall_attn, attention), dim=0)
                 else:
                     output, hidden = self.decoder(x, hidden, encoder_outputs=enc_ops)
 
